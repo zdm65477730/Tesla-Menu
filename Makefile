@@ -37,10 +37,10 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-APP_TITLE	:=	Tesla Menu
+APP_TITLE	:=	Tesla-Menu
 APP_VERSION	:=	v1.1.2
 
-TARGET		:=	$(notdir $(CURDIR))
+TARGET		:=	$(APP_TITLE)
 BUILD		:=	build
 SOURCES		:=	source
 DATA		:=	data
@@ -55,9 +55,9 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DAPPTITLE=\"$(APP_TITLE)\"
 
-CXXFLAGS	:= $(CFLAGS) -fno-exceptions -std=c++20
+CXXFLAGS	:= $(CFLAGS) -fexceptions -std=c++20
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -166,14 +166,21 @@ all: $(BUILD)
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@rm -rf $(CURDIR)/SdOut
+	@mkdir -p $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)
+	@mkdir -p $(CURDIR)/SdOut/config/$(APP_TITLE)
+	@cp -r ovlmenu.ovl $(CURDIR)/SdOut/switch/.overlays/
+	@cp -r $(CURDIR)/lang/* $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)/
+	@echo "ovl-sysmodules\nStatusMonitor\nEdiZon\nReverseNX-RT\nsys-clk\nemuiibo\nldn_mitm\nQuickNTP\nSysDVR\nFizeau\nZing" > $(CURDIR)/SdOut/config/$(APP_TITLE)/sort.cfg
+	@cd $(CURDIR)/SdOut; zip -r -q -9 $(APP_TITLE).zip switch config; cd $(CURDIR)
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
 ifeq ($(strip $(APP_JSON)),)
-	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET).nro $(TARGET).nacp $(TARGET).elf ovlmenu.ovl $(CURDIR)/SdOut
 else
-	@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).nso $(TARGET).npdm $(TARGET).elf
+	@rm -fr $(BUILD) $(TARGET).nsp $(TARGET).nso $(TARGET).npdm $(TARGET).elf ovlmenu.ovl $(CURDIR)/SdOut
 endif
 
 
