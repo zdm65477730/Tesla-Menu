@@ -71,23 +71,9 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
 }
 
 static tsl::elm::HeaderOverlayFrame *rootFrame = nullptr;
+static std::vector<std::string> sortArray{};
 
 static void rebuildUI() {
-    std::string sortFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "sort.cfg";
-    std::vector<std::string> sortArray{};
-    tsl::hlp::doWithSDCardHandle([&sortFilePath, &sortArray] {
-        if (std::filesystem::exists(sortFilePath)) {
-            std::ifstream ifs(sortFilePath, std::ifstream::in);
-            if(ifs.is_open()) {
-                std::string strPluginName;
-                while(std::getline(ifs, strPluginName)) {
-                    sortArray.emplace_back(strPluginName);
-                }
-                ifs.close();
-            }
-        }
-    });
-
     auto *overlayList = new tsl::elm::List();  
     auto *header = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         const u8 *logo = logo_bin;
@@ -111,7 +97,6 @@ static void rebuildUI() {
 
     std::vector<std::filesystem::directory_entry> overlayFiles;
 
-    fsdevMountSdmc();
     for (const auto &entry : std::filesystem::directory_iterator("sdmc:/switch/.overlays")) {
         if (entry.path().filename() == "ovlmenu.ovl")
             continue;
@@ -153,20 +138,21 @@ static void rebuildUI() {
         auto [result, name, version] = getOverlayInfo(entry.path());
         if (result != ResultSuccess)
             continue;
+
         std::string pluginName = name;
         std::string pluginLangPath = std::string("sdmc:/switch/.overlays/lang/") + name + "/" + base_lang + ".json";
         if (std::filesystem::exists(pluginLangPath)) {
             try {
-                    std::ifstream ifs(pluginLangPath);
-                    auto lang_json = nlohmann::json::parse(ifs);
-                    if(!lang_json.empty()) {
-                        for(auto item : lang_json.items()) {
-                            if (!item.key().compare("PluginName")) {
-                                pluginName = item.value();
-                                break;
-                            }
+                std::ifstream ifs(pluginLangPath);
+                auto lang_json = nlohmann::json::parse(ifs);
+                if(!lang_json.empty()) {
+                    for(auto item : lang_json.items()) {
+                        if (!item.key().compare("PluginName")) {
+                            pluginName = item.value();
+                            break;
                         }
                     }
+                }
             } catch(std::exception&) {}
         }
 
@@ -186,8 +172,6 @@ static void rebuildUI() {
         overlayList->addItem(listEntry);
     }
 
-    fsdevUnmountDevice("sdmc");
-
     rootFrame->setHeader(header);
 
     if (overlayFiles.empty()) {
@@ -200,20 +184,7 @@ static void rebuildUI() {
 
 class GuiMain : public tsl::Gui {
 public:
-    GuiMain() {
-        std::string jsonStr = R"(
-            {
-                "noOverlaysErrorOverlayTeslaMenuCustomDrawerText": "No Overlays found!",
-                "noOverlaysHitOverlayTeslaMenuCustomDrawerText": "Place your .ovl files in /switch/.overlays"
-            }
-        )";
-        std::string lanPath = std::string("sdmc:/switch/.overlays/lang/") + APPTITLE + "/";
-        fsdevMountSdmc();
-        tsl::hlp::doWithSmSession([&lanPath, &jsonStr]{
-            tsl::tr::InitTrans(lanPath, jsonStr);
-        });
-        fsdevUnmountDevice("sdmc");
-    }
+    GuiMain() { }
     ~GuiMain() { }
 
     tsl::elm::Element* createUI() override {
@@ -230,6 +201,35 @@ public:
     OverlayTeslaMenu() { }
     ~OverlayTeslaMenu() { }
 
+    virtual void initServices() override {
+        fsdevMountSdmc();
+        std::string jsonStr = R"(
+            {
+                "noOverlaysErrorOverlayTeslaMenuCustomDrawerText": "No Overlays found!",
+                "noOverlaysHitOverlayTeslaMenuCustomDrawerText": "Place your .ovl files in /switch/.overlays"
+            }
+        )";
+        std::string lanPath = std::string("sdmc:/switch/.overlays/lang/") + APPTITLE + "/";
+        tsl::tr::InitTrans(lanPath, jsonStr);
+
+        sortArray.clear();
+        std::string sortFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "sort.cfg";
+        if (std::filesystem::exists(sortFilePath)) {
+            std::ifstream ifs(sortFilePath, std::ifstream::in);
+            if(ifs.is_open()) {
+                std::string strPluginName;
+                while(std::getline(ifs, strPluginName)) {
+                    sortArray.emplace_back(strPluginName);
+                }
+                ifs.close();
+            }
+        }
+    }
+
+    virtual void exitServices() override {
+        fsdevUnmountDevice("sdmc");
+    }
+
     void onShow() override { 
         if (rootFrame != nullptr) {
             tsl::Overlay::get()->getCurrentGui()->removeFocus();
@@ -243,7 +243,6 @@ public:
         return initially<GuiMain>();
     }
 };
-
 
 int main(int argc, char **argv) {
     return tsl::loop<OverlayTeslaMenu, tsl::impl::LaunchFlags::None>(argc, argv);
