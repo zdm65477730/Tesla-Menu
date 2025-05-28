@@ -244,6 +244,37 @@ public:
     }
 };
 
+static void switchTencentVerToGlobalVer() {
+    Result rc = setsysInitialize();
+    if (R_SUCCEEDED(rc)) {
+        bool isTencentVersion = false;
+        if (R_SUCCEEDED(rc = setsysGetT(&isTencentVersion))) {
+            if (isTencentVersion) {
+                if (R_SUCCEEDED(rc = setsysSetT(false))) {
+                    if (R_SUCCEEDED(rc = setsysSetRegionCode(SetRegion_HTK))) {
+                        if (R_SUCCEEDED(rc = spsmInitialize())) {
+                            spsmShutdown(true);
+                            spsmExit();
+                            setsysExit();
+                            smExit();
+                        } else {
+                            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+                        }
+                    } else {
+                        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+                    }
+                } else {
+                    fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+                }
+            }
+        } else {
+            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        }
+        setsysExit();
+    }
+}
+
 int main(int argc, char **argv) {
+    switchTencentVerToGlobalVer();
     return tsl::loop<OverlayTeslaMenu, tsl::impl::LaunchFlags::None>(argc, argv);
 }
