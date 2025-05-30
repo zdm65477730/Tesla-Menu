@@ -302,6 +302,5 @@ public:
 };
 
 int main(int argc, char **argv) {
-    switchTencentVerToGlobalVer();
     return tsl::loop<OverlayTeslaMenu, tsl::impl::LaunchFlags::None>(argc, argv);
 }
