@@ -80,17 +80,11 @@ static void switchTencentVerToGlobalVer() {
     if (std::filesystem::exists(cfgFilePath))
         is_do_for_ofw = true;
 
-    if (R_FAILED(rc = smInitialize()))
+    if (R_FAILED(rc = splInitialize()))
         fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-
-    if (R_FAILED(rc = splInitialize())) {
-        smExit();
-        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-    }
 
     if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
         splExit();
-        smExit();
         fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
     }
     splExit();
@@ -109,30 +103,24 @@ static void switchTencentVerToGlobalVer() {
                             spsmShutdown(true);
                             spsmExit();
                             setsysExit();
-                            smExit();
                         } else {
                             setsysExit();
-                            smExit();
                             fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
                         }
                     } else {
                         setsysExit();
-                        smExit();
                         fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
                     }
                 } else {
                     setsysExit();
-                    smExit();
                     fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
                 }
             }
         } else {
             setsysExit();
-            smExit();
             fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
         }
         setsysExit();
-        smExit();
     }
 }
 
@@ -270,7 +258,7 @@ public:
     virtual void initServices() override {
         fsdevMountSdmc();
 
-
+        switchTencentVerToGlobalVer();
 
         std::string jsonStr = R"(
             {
