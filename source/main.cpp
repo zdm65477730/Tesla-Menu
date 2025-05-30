@@ -70,6 +70,72 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
     return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
 }
 
+static void switchTencentVerToGlobalVer() {
+    Result rc;
+    constexpr u32 ExosphereEmummcType = 65007;
+    u64 is_emummc;
+    bool is_do_for_ofw = false;
+
+    std::string cfgFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "enable_for_ofw.flag";
+    if (std::filesystem::exists(cfgFilePath))
+        is_do_for_ofw = true;
+
+    if (R_FAILED(rc = smInitialize()))
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+
+    if (R_FAILED(rc = splInitialize())) {
+        smExit();
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+    }
+
+    if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
+        splExit();
+        smExit();
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+    }
+    splExit();
+
+    if (!is_emummc && !is_do_for_ofw)
+        return;
+
+    rc = setsysInitialize();
+    if (R_SUCCEEDED(rc)) {
+        bool isTencentVersion = false;
+        if (R_SUCCEEDED(rc = setsysGetT(&isTencentVersion))) {
+            if (isTencentVersion) {
+                if (R_SUCCEEDED(rc = setsysSetT(false))) {
+                    if (R_SUCCEEDED(rc = setsysSetRegionCode(SetRegion_HTK))) {
+                        if (R_SUCCEEDED(rc = spsmInitialize())) {
+                            spsmShutdown(true);
+                            spsmExit();
+                            setsysExit();
+                            smExit();
+                        } else {
+                            setsysExit();
+                            smExit();
+                            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+                        }
+                    } else {
+                        setsysExit();
+                        smExit();
+                        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+                    }
+                } else {
+                    setsysExit();
+                    smExit();
+                    fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+                }
+            }
+        } else {
+            setsysExit();
+            smExit();
+            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        }
+        setsysExit();
+        smExit();
+    }
+}
+
 static tsl::elm::HeaderOverlayFrame *rootFrame = nullptr;
 static std::vector<std::string> sortArray{};
 
@@ -203,6 +269,9 @@ public:
 
     virtual void initServices() override {
         fsdevMountSdmc();
+
+
+
         std::string jsonStr = R"(
             {
                 "noOverlaysErrorOverlayTeslaMenuCustomDrawerText": "No Overlays found!",
@@ -243,36 +312,6 @@ public:
         return initially<GuiMain>();
     }
 };
-
-static void switchTencentVerToGlobalVer() {
-    Result rc = setsysInitialize();
-    if (R_SUCCEEDED(rc)) {
-        bool isTencentVersion = false;
-        if (R_SUCCEEDED(rc = setsysGetT(&isTencentVersion))) {
-            if (isTencentVersion) {
-                if (R_SUCCEEDED(rc = setsysSetT(false))) {
-                    if (R_SUCCEEDED(rc = setsysSetRegionCode(SetRegion_HTK))) {
-                        if (R_SUCCEEDED(rc = spsmInitialize())) {
-                            spsmShutdown(true);
-                            spsmExit();
-                            setsysExit();
-                            smExit();
-                        } else {
-                            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-                        }
-                    } else {
-                        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-                    }
-                } else {
-                    fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-                }
-            }
-        } else {
-            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-        }
-        setsysExit();
-    }
-}
 
 int main(int argc, char **argv) {
     switchTencentVerToGlobalVer();
