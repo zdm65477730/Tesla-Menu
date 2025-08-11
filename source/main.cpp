@@ -70,58 +70,75 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
     return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
 }
 
+static Result setGlobalRegion() {
+    Result rc;
+    if (R_SUCCEEDED(rc = setsysSetT(false))) {
+        if (R_SUCCEEDED(rc = setsysSetRegionCode(SetRegion_HTK))) {
+            if (R_SUCCEEDED(rc = spsmInitialize())) {
+                spsmShutdown(true);
+                spsmExit();
+            }
+        }
+    }
+    return rc;
+}
+
 static void switchTencentVerToGlobalVer() {
     Result rc;
+    std::string cfgFilePath;
+
+    bool force_switch = false;
+    cfgFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "force_swtich.flag";
+    if (std::filesystem::exists(cfgFilePath))
+        force_switch = true;
+
+    if (R_FAILED(rc = setsysInitialize())) {
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        return;
+    }
+
+    if (force_switch) {
+        rc = setGlobalRegion();
+        setsysExit();
+        if (R_FAILED(rc))
+            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        return;
+    }
+
     constexpr u32 ExosphereEmummcType = 65007;
     u64 is_emummc;
-    bool is_do_for_ofw = false;
-
-    std::string cfgFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "enable_for_ofw.flag";
-    if (std::filesystem::exists(cfgFilePath))
-        is_do_for_ofw = true;
-
-    if (R_FAILED(rc = splInitialize()))
-        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-
-    if (R_FAILED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc))) {
+    if (R_SUCCEEDED(rc = splInitialize())) {
+        rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc);
         splExit();
-        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-    }
-    splExit();
-
-    if (!is_emummc && !is_do_for_ofw)
-        return;
-
-    rc = setsysInitialize();
-    if (R_SUCCEEDED(rc)) {
-        bool isTencentVersion = false;
-        if (R_SUCCEEDED(rc = setsysGetT(&isTencentVersion))) {
-            if (isTencentVersion) {
-                if (R_SUCCEEDED(rc = setsysSetT(false))) {
-                    if (R_SUCCEEDED(rc = setsysSetRegionCode(SetRegion_HTK))) {
-                        if (R_SUCCEEDED(rc = spsmInitialize())) {
-                            spsmShutdown(true);
-                            spsmExit();
-                            setsysExit();
-                        } else {
-                            setsysExit();
-                            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-                        }
-                    } else {
-                        setsysExit();
-                        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-                    }
-                } else {
-                    setsysExit();
-                    fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
-                }
-            }
-        } else {
+        if (R_FAILED(rc)) {
             setsysExit();
             fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+            return;
         }
-        setsysExit();
+
+        bool is_do_for_ofw = false;
+        cfgFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "enable_for_ofw.flag";
+        if (std::filesystem::exists(cfgFilePath))
+            is_do_for_ofw = true;
+        if (!is_emummc && !is_do_for_ofw) {
+            setsysExit();
+            return;
+        }
     }
+
+    bool isTencentVersion = false;
+    if (R_FAILED(rc = setsysGetT(&isTencentVersion))) {
+        setsysExit();
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        return;
+    }
+
+    if (isTencentVersion)
+        rc = setGlobalRegion();
+
+    setsysExit();
+    if (R_FAILED(rc))
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
 }
 
 static tsl::elm::HeaderOverlayFrame *rootFrame = nullptr;
