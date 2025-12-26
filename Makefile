@@ -38,7 +38,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Tesla-Menu
-APP_VERSION	:=	v1.1.2
+APP_VERSION	:=	v1.1.3
 
 TARGET		:=	$(APP_TITLE)
 BUILD		:=	build
