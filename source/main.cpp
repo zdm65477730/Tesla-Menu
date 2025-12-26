@@ -169,7 +169,7 @@ static void rebuildUI() {
     std::vector<std::filesystem::directory_entry> overlayFiles;
 
     for (const auto &entry : std::filesystem::directory_iterator("sdmc:/switch/.overlays")) {
-        if (entry.path().filename() == "ovlmenu.ovl")
+        if (entry.path().filename() == "ovlmenu.ovl" || entry.path().filename() == "sys-patch.ovl" || entry.path().filename() == "sys-patch-overlay.ovl")
             continue;
 
         if (entry.path().extension() != ".ovl")
