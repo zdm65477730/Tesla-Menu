@@ -171,7 +171,7 @@ $(BUILD):
 	@mkdir -p $(CURDIR)/SdOut/config/$(APP_TITLE)
 	@cp -r ovlmenu.ovl $(CURDIR)/SdOut/switch/.overlays/
 	@cp -r $(CURDIR)/lang/* $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)/
-	@echo "ovl-sysmodules\nStatusMonitor\nEdiZon\nReverseNX-RT\nsys-clk\nemuiibo\nldn_mitm\nQuickNTP\nSysDVR\nFizeau\nZing" > $(CURDIR)/SdOut/config/$(APP_TITLE)/sort.cfg
+	@printf "ovl-sysmodules\nStatusMonitor\nEdiZon\nReverseNX-RT\nsys-clk\nemuiibo\nldn_mitm\nQuickNTP\nSysDVR\nFizeau\nZing" > $(CURDIR)/SdOut/config/$(APP_TITLE)/sort.cfg
 	@cd $(CURDIR)/SdOut; zip -r -q -9 $(APP_TITLE).zip switch config; cd $(CURDIR)
 
 #---------------------------------------------------------------------------------
