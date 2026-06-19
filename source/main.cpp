@@ -67,7 +67,7 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
     
     fclose(file);
 
-    return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
+    return { ResultSuccess, std::string(nacp.lang_data.lang[0].name, std::strlen(nacp.lang_data.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
 }
 
 static Result setGlobalRegion() {
